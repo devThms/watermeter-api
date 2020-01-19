@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
@@ -12,17 +14,20 @@ class UserController extends Controller
     private $rules = [
         'name'      =>      'required',
         'email'     =>      'required|email|unique:users',
-        'password'  =>      'required',
-        'role_id'   =>      'required'
+        'password'  =>      'required'
     ];
 
     private $messages = [
         'name.required'         =>  'El campo nombre es obligatorio',
         'email.required'        =>  'El campo email es obligatorio',
         'email.email'           =>  'El correo electronico debe ser una direccion de correo valida',
-        'password.required'     =>  'El campo password es obligatorio',
-        'role_id.required'      =>  'El campo role es obligatorio'
+        'password.required'     =>  'El campo password es obligatorio'
     ];
+
+    public function __construct()
+    {
+        // $this->middleware('jwt', ['except' => ['store']]);   
+    }
 
     /**
      * Display a listing of the resource.
@@ -31,12 +36,47 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::all();
+        $users = User::with('role')->paginate(15);
 
         return response()->json([
             'ok' => true,
             'data' => $users
         ], 200);
+    }
+
+
+    public function login(Request $request) {
+
+        $input = $request->all();
+
+        $user = User::with('role')->where('email', '=', $input['email'])
+                    ->first();
+
+        if ($user === null) {
+            return response()->json([
+                'data' => [
+                    'ok' => false,
+                    'error' => 'credenciales incorrectas',
+                    'code' => '200'
+                ]
+            ], 200);
+        } else {
+            if (Hash::check($input['password'], $user->password)){
+                return response()->json([
+                    'ok' => true,
+                    'data' => $user
+                ], 200);
+            } else {
+                return response()->json([
+                    'data' => [
+                        'ok' => false,
+                        'error' => 'credenciales incorrectas',
+                        'code' => '200'
+                    ]
+                ], 200);
+            }
+        }
+
     }
 
     /**
@@ -56,17 +96,27 @@ class UserController extends Controller
             $errors = $validator->errors();
 
             return response()->json([
-                'ok' => false,
-                'message' => 'Error en validación de formulario',
-                'errors' => $errors
+                'data' => [
+                    'ok' => false,
+                    'message' => 'Error en validación de formulario',
+                    'errors' => $errors,
+                    'code' => '400'
+                ]
             ], 400);
 
         }
 
-        // Encriptar la contraseña
-        $input['password'] = bcrypt($input['password']);
+        $role = Role::where('description', 'Operador')->first();
+        
+        $user = new User();
 
-        $user = User::create($input);
+        $user->name = $input['name'];
+        $user->email = $input['email'];
+        $user->password = bcrypt($input['password']);
+        $user->role_id = $role->id;
+
+        $user->role;
+        $user->save();
 
         return response()->json([
             'ok' => true,
@@ -86,7 +136,11 @@ class UserController extends Controller
         if (is_null($user)) {
 
             return response()->json([
-                ['error' => 'Recurso no encontrado']
+                'data' => [
+                    'ok' => false,
+                    'error' => 'Recurso no encontrado',
+                    'code' => '404'
+                ]
             ], 404);
 
         }
@@ -120,9 +174,11 @@ class UserController extends Controller
             $errors = $validator->errors();
 
             return response()->json([
-                'ok' => false,
-                'message' => 'Error en validación de formulario',
-                'errors' => $errors
+                'data' => [
+                    'ok' => false,
+                    'message' => 'Error en validación de formulario',
+                    'code' => '400'
+                ]
             ], 400);
 
 
@@ -147,11 +203,15 @@ class UserController extends Controller
 
         if ($user->isClean()) {
             return response()->json([
-                'error' => 'Se debe especificar al menos un valor diferente para actualizar',
-                'code' => '422'
+                'data' => [
+                    'ok' => false,
+                    'message' => 'Se debe especificar al menos un valor diferente para actualizar',
+                    'code' => '422'
+                ]
             ], 422);
         }
 
+        $user->role;
         $user->save();
 
         return response()->json([
@@ -173,15 +233,16 @@ class UserController extends Controller
         if (is_null($user)) {
 
             return response()->json([
-                ['error' => 'Recurso no encontrado']
+                'data' => [
+                    'ok' => false,
+                    'error' => 'Recurso no encontrado',
+                    'code' => '404'
+                ]
             ], 404);
 
         }
         
         $user->delete();
-
-        $user->status = 'Inactivo';
-        $user->save();
         
         return response()->json([
             'ok' => true,

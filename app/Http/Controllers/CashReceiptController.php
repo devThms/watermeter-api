@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashReceipt;
+use App\Models\Meter;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -20,6 +22,11 @@ class CashReceiptController extends Controller
         'ammount.required'          =>  'El campo cantidad es obligatorio'
     ];
 
+    public function __construct()
+    {
+        $this->middleware('jwt');
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -33,6 +40,43 @@ class CashReceiptController extends Controller
             'ok' => true,
             'data' => $cashReceipts
         ], 200);
+    }
+
+
+    public function receipt_log($meter)
+    {
+
+        $receipts = DB::table('cash_receipts as cr')
+                        ->join('orders as o', 'cr.order_id', '=', 'o.id' )
+                        ->where('o.meter_id', '=', $meter)
+                        ->where('cr.status', '<>', 'Emitido')
+                        ->select('cr.*', 'o.month')
+                        ->paginate(10);
+
+
+        return response()->json([
+            'ok' => true,
+            'data' => $receipts
+        ], 200);
+
+    }
+
+    public function pending_payment($meter)
+    {
+
+        $receipts = DB::table('cash_receipts as cr')
+                        ->join('orders as o', 'cr.order_id', '=', 'o.id' )
+                        ->where('o.meter_id', '=', $meter)
+                        ->where('cr.status', '=', 'Emitido')
+                        ->select('cr.*', 'o.month')
+                        ->paginate(10);
+                        
+
+        return response()->json([
+            'ok' => true,
+            'data' => $receipts
+        ], 200);
+
     }
 
     /**
@@ -64,9 +108,9 @@ class CashReceiptController extends Controller
         $cashReceipt->order_id = $input['order_id'];
         $cashReceipt->user_id = $input['user_id'];
         $cashReceipt->ammount = $input['ammount'];
-
-        $cashReceipt->description = 'Pago servicio de agua correspondiente al mes de ' . $cashReceipt->order->month . ' orden No. 0000' . $input['order_id'];
-
+        $cashReceipt->description = 'Pago servicio de agua correspondiente al mes ' . $cashReceipt->order->month . ' orden No. 0000' . $input['order_id'];
+        
+        
         $cashReceipt->save();
 
         return response()->json([
@@ -120,8 +164,11 @@ class CashReceiptController extends Controller
 
         if ($cashReceipt->isClean()) {
             return response()->json([
-                'error' => 'Se debe especificar al menos un valor diferente para actualizar',
-                'code' => '422'
+                'data' => [
+                    'ok' => false,
+                    'message' => 'Se debe especificar al menos un valor diferente para actualizar',
+                    'code' => '422'
+                ]
             ], 422);
         } 
 

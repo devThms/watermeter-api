@@ -23,7 +23,8 @@ class CashReceipt extends Model
     protected $fillable = [
         'order_id',
         'user_id',
-        'ammount'
+        'ammount',
+        'description'
     ];
 
     public function order() {

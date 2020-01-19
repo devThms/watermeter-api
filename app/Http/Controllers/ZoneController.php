@@ -21,6 +21,13 @@ class ZoneController extends Controller
         'dateMax.digits'        =>  'El campo FechaMaxima debe contener 2 digitos numericos'
     ];
 
+    
+    public function __construct()
+    {
+        $this->middleware('jwt');
+    }
+
+
     /**
      * Display a listing of the resource.
      *
@@ -28,7 +35,7 @@ class ZoneController extends Controller
      */
     public function index()
     {
-        $zones = Zone::all();
+        $zones = Zone::paginate(15);
 
         return response()->json([
             'ok' => true,
@@ -129,8 +136,11 @@ class ZoneController extends Controller
 
         if ($zone->isClean()) {
             return response()->json([
-                'error' => 'Se debe especificar al menos un valor diferente para actualizar',
-                'code' => '422'
+                'data' => [
+                    'ok' => false,
+                    'message' => 'Se debe especificar al menos un valor diferente para actualizar',
+                    'code' => '422'
+                ]
             ], 422);
         }
 

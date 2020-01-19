@@ -29,6 +29,11 @@ class CustomerController extends Controller
         'telephone.digits'     =>  'El campo telefono debe contener 8 digitos'
     ];
 
+    public function __construct()
+    {
+        $this->middleware('jwt');
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -36,7 +41,7 @@ class CustomerController extends Controller
      */
     public function index()
     {
-        $customers = Customer::all();
+        $customers = Customer::paginate(15);
 
         return response()->json([
             'ok' => true,
@@ -154,8 +159,11 @@ class CustomerController extends Controller
 
         if ($customer->isClean()) {
             return response()->json([
-                'error' => 'Se debe especificar al menos un valor diferente para actualizar',
-                'code' => '422'
+                'data' => [
+                    'ok' => false,
+                    'message' => 'Se debe especificar al menos un valor diferente para actualizar',
+                    'code' => '422'
+                ]
             ], 422);
         }
 

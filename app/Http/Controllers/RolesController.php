@@ -18,6 +18,11 @@ class RolesController extends Controller
     ];
 
 
+    public function __construct()
+    {
+        $this->middleware('jwt');
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -25,7 +30,7 @@ class RolesController extends Controller
      */
     public function index()
     {
-        $roles = Role::all();
+        $roles = Role::paginate(15);
 
         return response()->json([
             'ok' => true,

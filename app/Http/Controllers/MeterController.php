@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Meter;
+use App\Models\Zone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -23,6 +24,11 @@ class MeterController extends Controller
         'zone_id.required'          =>  'El campo zona es obligatorio'
     ];
 
+    public function __construct()
+    {
+        $this->middleware('jwt');
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -31,6 +37,18 @@ class MeterController extends Controller
     public function index()
     {
         $meters = Meter::all();
+
+        return response()->json([
+            'ok' => true,
+            'data' => $meters
+        ], 200);
+    }
+
+
+    // Obtener medidores por zona
+    public function meter_zone($zone)
+    {
+        $meters = Meter::with('customer')->where('zone_id', '=', $zone)->paginate(15);
 
         return response()->json([
             'ok' => true,
@@ -55,9 +73,12 @@ class MeterController extends Controller
             $errors = $validator->errors();
 
             return response()->json([
-                'ok' => false,
-                'message' => 'Error en validación de formulario',
-                'errors' => $errors
+                'data' => [
+                    'ok' => false,
+                    'message' => 'Error en validación de formulario',
+                    'error' => $errors,
+                    'code' => '400'
+                ]
             ], 400);
 
         }
@@ -123,8 +144,11 @@ class MeterController extends Controller
 
         if ($meter->isClean()) {
             return response()->json([
-                'error' => 'Se debe especificar al menos un valor diferente para actualizar',
-                'code' => '422'
+                'data' => [
+                    'ok' => false,
+                    'message' => 'Se debe especificar al menos un valor diferente para actualizar',
+                    'code' => '422'
+                ]
             ], 422);
         }
 
@@ -148,7 +172,7 @@ class MeterController extends Controller
         $meter->delete();
 
         // cambiar estado al momento de eliminarlo
-        $meter->status = 'Inactivo';
+        $meter->status = 'Baja Definitiva';
         $meter->save();
 
         return response()->json([

@@ -6,12 +6,14 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Tymon\JWTAuth\Contracts\JWTSubject; 
+
 use App\Models\Role;
 use App\Models\Order;
 use App\Models\CashReceipt;
 use App\Models\Invoice;
 
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
     use Notifiable, SoftDeletes;
 
@@ -62,5 +64,13 @@ class User extends Authenticatable
 
     public function invoices() {
         return $this->hasMany(Invoice::class);
+    }
+
+    public function getJWTIdentifier() {         
+        return $this->getKey();     
+    } 
+
+    public function getJWTCustomClaims()  {         
+        return [];     
     }
 }

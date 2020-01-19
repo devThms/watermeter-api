@@ -22,7 +22,8 @@ class Invoice extends Model
     protected $fillable = [
         'cash_receipt_id',
         'user_id',
-        'ammount'
+        'ammount',
+        'description'
     ];
 
     public function cashReceipt() {
